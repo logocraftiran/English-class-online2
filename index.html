@@ -1,0 +1,304 @@
+
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#176b57">
+<title>زبان شیرین | ورود و ثبت‌نام</title>
+<style>
+:root{font-family:Tahoma,"Segoe UI",sans-serif;color:#18312b;background:#f3f8f5}
+*{box-sizing:border-box}
+body{margin:0;line-height:1.8}
+.hero{background:linear-gradient(120deg,#104f43,#21856c);color:white;padding:28px 18px 42px}
+.wrap{width:min(940px,calc(100% - 28px));margin:auto}
+.brand{font-size:1.25rem;font-weight:bold}
+.hero h1{font-size:clamp(1.7rem,5vw,2.5rem);margin:20px 0 4px}
+.hero p{margin:0;color:#e1f2ec}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:-18px;padding-bottom:35px}
+.card{background:white;border:1px solid #dce7e2;border-radius:18px;padding:22px;box-shadow:0 10px 30px #153e3010}
+.card h2{margin:0 0 10px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.tab,button{font:inherit;cursor:pointer;border-radius:10px;padding:9px 13px}
+.tab{background:white;border:1px solid #dce7e2;color:#18312b}
+.tab[aria-selected=true]{background:#e6f4ee;border-color:#9ccdbb;color:#105443}
+.field{display:block;margin:12px 0}
+.field span{display:block;font-size:.9rem;margin-bottom:4px}
+.field input{width:100%;border:1px solid #cbd9d2;border-radius:10px;padding:12px;font:inherit}
+.primary{width:100%;border:0;background:#176b57;color:white;font-weight:bold;margin-top:8px}
+.secondary{border:0;background:#eaf3ef;color:#105443}
+.status{background:#f1f6f3;color:#526860;border-radius:10px;padding:10px 12px;font-size:.9rem;margin-top:12px;white-space:pre-wrap}
+.error{background:#fff0f0;color:#a22b37}
+.success{background:#e8f7ee;color:#176b57}
+.hidden{display:none!important}
+.feature{display:flex;gap:12px;margin:14px 0}
+.ico{background:#e7f4ee;border-radius:12px;min-width:40px;height:40px;display:grid;place-items:center}
+.muted,small{color:#637570}
+.role{display:inline-block;background:#e7f4ee;color:#105443;border-radius:99px;padding:2px 10px}
+.headrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+footer{text-align:center;color:#637570;font-size:.85rem;padding:0 12px 24px}
+@media(max-width:700px){.layout{grid-template-columns:1fr}.card{padding:18px}}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="brand">🍃 زبان شیرین</div>
+    <h1>یادگیری زبان، ساده‌تر و شیرین‌تر</h1>
+    <p>حساب بساز، وارد شو و برای شروع کلاس‌های آنلاین آماده شو.</p>
+  </div>
+</header>
+
+<main class="wrap layout">
+<section class="card" id="authCard">
+  <h2 id="formTitle">ورود به حساب</h2>
+  <p class="muted">ثبت‌نام عمومی همیشه با نقش پیش‌فرض دانش‌آموز انجام می‌شود.</p>
+
+  <div class="tabs">
+    <button class="tab" id="loginTab" aria-selected="true" type="button">ورود</button>
+    <button class="tab" id="signupTab" aria-selected="false" type="button">ثبت‌نام</button>
+    <button class="tab" id="resetTab" aria-selected="false" type="button">بازیابی رمز</button>
+  </div>
+
+  <form id="authForm">
+    <label class="field hidden" id="nameField">
+      <span>نام نمایشی</span>
+      <input id="displayName" maxlength="70" autocomplete="name" placeholder="نام شما">
+    </label>
+
+    <label class="field">
+      <span>ایمیل</span>
+      <input id="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+    </label>
+
+    <label class="field" id="passwordField">
+      <span>رمز عبور (حداقل ۸ نویسه)</span>
+      <input id="password" type="password" minlength="8" autocomplete="current-password" placeholder="رمز عبور">
+    </label>
+
+    <button class="primary" id="submitBtn" type="submit">ورود</button>
+  </form>
+
+  <div id="status" class="status" role="status" aria-live="polite">
+    برای شروع، ورود یا ثبت‌نام را انتخاب کن.
+  </div>
+</section>
+
+<section class="card">
+  <h2>مسیر ساخت سایت</h2>
+
+  <div class="feature">
+    <div class="ico">🔐</div>
+    <div><strong>ورود و ثبت‌نام</strong><br><small>Supabase Auth و پروفایل با نقش امن</small></div>
+  </div>
+
+  <div class="feature">
+    <div class="ico">🎓</div>
+    <div><strong>کلاس‌ها و عضویت</strong><br><small>مرحلهٔ بعد: ایجاد کلاس و درخواست عضویت</small></div>
+  </div>
+
+  <div class="feature">
+    <div class="ico">💬</div>
+    <div><strong>گفت‌وگو و تختهٔ سفید</strong><br><small>بعد از آزمایش ورود، این امکانات اضافه می‌شوند</small></div>
+  </div>
+
+  <div id="dashboard" class="hidden">
+    <hr>
+    <div class="headrow">
+      <h2>حساب من</h2>
+      <button class="secondary" id="logoutBtn" type="button">خروج</button>
+    </div>
+    <p>سلام <strong id="userName">کاربر</strong></p>
+    <p>نقش: <span class="role" id="userRole">در حال بررسی…</span></p>
+    <p class="muted">نقش از جدول profiles خوانده می‌شود.</p>
+  </div>
+</section>
+</main>
+
+<footer>زبان شیرین · نسخهٔ اولیه با تمرکز بر امنیت</footer>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// این کلید عمومی است؛ هرگز service_role یا secret key را در مرورگر قرار نده.
+const supabase = createClient(
+  'https://utirkktakivedceofjsx.supabase.co',
+  'sb_publishable_OnohhOvPSYeojddzVbmqHg_TpEChyOT'
+);
+
+const $ = id => document.getElementById(id);
+let mode = 'login';
+
+const tabs = {
+  login: $('loginTab'),
+  signup: $('signupTab'),
+  reset: $('resetTab')
+};
+
+function say(message, type = '') {
+  $('status').textContent = message;
+  $('status').className = 'status ' + type;
+}
+
+function setMode(newMode) {
+  mode = newMode;
+
+  Object.entries(tabs).forEach(([key, button]) => {
+    button.setAttribute('aria-selected', String(key === mode));
+  });
+
+  $('nameField').classList.toggle('hidden', mode !== 'signup');
+  $('passwordField').classList.toggle('hidden', mode === 'reset');
+  $('password').required = mode !== 'reset';
+  $('password').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+
+  $('formTitle').textContent =
+    mode === 'login' ? 'ورود به حساب' :
+    mode === 'signup' ? 'ساخت حساب جدید' :
+    'بازیابی رمز عبور';
+
+  $('submitBtn').textContent =
+    mode === 'login' ? 'ورود' :
+    mode === 'signup' ? 'ساخت حساب' :
+    'ارسال لینک بازیابی';
+
+  say(
+    mode === 'signup' ? 'حساب جدید با نقش دانش‌آموز ساخته می‌شود.' :
+    mode === 'reset' ? 'ایمیل حساب را وارد کن تا لینک بازیابی ارسال شود.' :
+    'ایمیل و رمز عبور را وارد کن.'
+  );
+}
+
+Object.entries(tabs).forEach(([key, button]) => {
+  button.addEventListener('click', () => setMode(key));
+});
+
+function roleName(role) {
+  return ({
+    student: 'دانش‌آموز',
+    teacher: 'معلم',
+    admin: 'مدیر'
+  })[role] || 'دانش‌آموز';
+}
+
+async function showSession(session) {
+  if (!session) {
+    $('dashboard').classList.add('hidden');
+    $('authCard').classList.remove('hidden');
+    return;
+  }
+
+  $('authCard').classList.add('hidden');
+  $('dashboard').classList.remove('hidden');
+  $('userName').textContent = session.user.email || 'کاربر';
+  $('userRole').textContent = 'در حال بررسی…';
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('display_name,role')
+    .eq('id', session.user.id)
+    .maybeSingle();
+
+  if (error || !data) {
+    $('userRole').textContent = 'نامشخص';
+    say(
+      'ورود انجام شد اما پروفایل خوانده نشد. تنظیمات profiles و RLS را بررسی کن.',
+      'error'
+    );
+    return;
+  }
+
+  $('userName').textContent = data.display_name || session.user.email || 'کاربر';
+  $('userRole').textContent = roleName(data.role);
+}
+
+$('authForm').addEventListener('submit', async event => {
+  event.preventDefault();
+
+  const button = $('submitBtn');
+  button.disabled = true;
+
+  try {
+    const email = $('email').value.trim();
+    const password = $('password').value;
+
+    if (mode === 'signup') {
+      if (password.length < 8) {
+        say('رمز عبور باید حداقل ۸ نویسه باشد.', 'error');
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: $('displayName').value.trim() || email.split('@')[0]
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        say('حساب ساخته شد.', 'success');
+        await showSession(data.session);
+      } else {
+        say(
+          'درخواست ثبت‌نام پذیرفته شد. اگر تأیید ایمیل فعال است، ایمیلت را بررسی کن و سپس وارد شو.',
+          'success'
+        );
+      }
+
+    } else if (mode === 'login') {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      say('ورود موفق بود.', 'success');
+      await showSession(data.session);
+
+    } else {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: location.origin + location.pathname
+      });
+
+      if (error) throw error;
+
+      say(
+        'اگر این ایمیل حساب داشته باشد، لینک بازیابی ارسال می‌شود.',
+        'success'
+      );
+    }
+
+  } catch (error) {
+    say(error?.message || 'خطایی رخ داد؛ دوباره تلاش کن.', 'error');
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$('logoutBtn').addEventListener('click', async () => {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    say(error.message, 'error');
+    return;
+  }
+
+  await showSession(null);
+  setMode('login');
+});
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  queueMicrotask(() => showSession(session));
+});
+
+const { data: { session } } = await supabase.auth.getSession();
+await showSession(session);
+</script>
+</body>
+</html>
