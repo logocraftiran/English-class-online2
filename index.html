@@ -1,0 +1,222 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>زبان شیرین | ورود و ثبت‌نام</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; font-family: Tahoma, Arial, sans-serif;
+      background: linear-gradient(135deg,#e0f2fe,#f5f3ff);
+      color: #172554;
+    }
+    .card {
+      width: 100%; max-width: 410px; padding: 28px;
+      background: white; border-radius: 22px;
+      box-shadow: 0 15px 45px #1e3a8a18;
+    }
+    h1 { text-align: center; margin: 0 0 8px; }
+    .sub { text-align: center; color: #64748b; margin-bottom: 25px; }
+    label { display: block; margin: 15px 0 7px; }
+    input {
+      width: 100%; padding: 13px; border: 1px solid #cbd5e1;
+      border-radius: 10px; font-size: 16px; outline-color: #6366f1;
+    }
+    button {
+      width: 100%; padding: 13px; margin-top: 13px;
+      border: 0; border-radius: 10px; cursor: pointer;
+      font-size: 15px; font-weight: bold;
+    }
+    .primary { background: #4f46e5; color: white; }
+    .secondary { background: #eef2ff; color: #3730a3; }
+    .hidden { display: none; }
+    #message {
+      margin-top: 16px; line-height: 1.8;
+      overflow-wrap: anywhere; font-size: 14px;
+    }
+    #home { text-align: center; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <section id="auth">
+      <h1>زبان شیرین 🍃</h1>
+      <p class="sub" id="subtitle">به حساب خود وارد شوید</p>
+
+      <form id="authForm">
+        <label for="username">نام کاربری</label>
+        <input id="username" autocomplete="username"
+               minlength="3" maxlength="24"
+               pattern="[A-Za-z0-9_]+"
+               placeholder="مثلاً kian_123" required>
+
+        <label for="password">رمز عبور</label>
+        <input id="password" type="password"
+               autocomplete="current-password"
+               minlength="8" placeholder="حداقل ۸ نویسه" required>
+
+        <button class="primary" id="submitBtn" type="submit">ورود</button>
+      </form>
+
+      <button class="secondary" id="switchBtn" type="button">
+        حساب ندارید؟ ساخت حساب جدید
+      </button>
+      <p id="message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="home" class="hidden">
+      <h1>خوش آمدی 🌟</h1>
+      <p id="welcome"></p>
+      <p>ورود به زبان شیرین موفق بود.</p>
+      <button class="primary" id="logoutBtn">خروج از حساب</button>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://utirkktakivedceofjsx.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_OnohhOvPSYeojddzVbmqHg_TpEChyOT";
+
+    const client = window.supabase.createClient(
+      SUPABASE_URL, SUPABASE_KEY
+    );
+
+    const $ = id => document.getElementById(id);
+    let isSignup = false;
+    let busy = false;
+
+    function usernameToEmail(username) {
+      return username.trim().toLowerCase() +
+        "@username.zaban-shirin.invalid";
+    }
+
+    function showMessage(text, success = false) {
+      $("message").textContent = text;
+      $("message").style.color = success ? "#15803d" : "#b91c1c";
+    }
+
+    function setMode(signup) {
+      isSignup = signup;
+      $("subtitle").textContent = signup
+        ? "حساب جدید خود را بسازید"
+        : "به حساب خود وارد شوید";
+      $("submitBtn").textContent = signup ? "ساخت حساب" : "ورود";
+      $("switchBtn").textContent = signup
+        ? "حساب دارید؟ ورود"
+        : "حساب ندارید؟ ساخت حساب جدید";
+      $("password").autocomplete = signup
+        ? "new-password" : "current-password";
+      showMessage("");
+    }
+
+    $("switchBtn").addEventListener("click", () => {
+      setMode(!isSignup);
+    });
+
+    $("authForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      if (busy) return;
+
+      const username = $("username").value.trim();
+      const password = $("password").value;
+
+      if (!/^[A-Za-z0-9_]{3,24}$/.test(username)) {
+        showMessage("نام کاربری باید ۳ تا ۲۴ نویسه و فقط شامل حروف انگلیسی، عدد یا _ باشد.");
+        return;
+      }
+      if (password.length < 8) {
+        showMessage("رمز عبور باید حداقل ۸ نویسه داشته باشد.");
+        return;
+      }
+
+      busy = true;
+      $("submitBtn").disabled = true;
+      $("switchBtn").disabled = true;
+      $("submitBtn").textContent = "لطفاً صبر کنید...";
+      showMessage("");
+
+      try {
+        const email = usernameToEmail(username);
+        let result;
+
+        if (isSignup) {
+          result = await client.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { username: username.toLowerCase() }
+            }
+          });
+        } else {
+          result = await client.auth.signInWithPassword({
+            email,
+            password
+          });
+        }
+
+        if (result.error) throw result.error;
+
+        if (isSignup && !result.data.session) {
+          showMessage(
+            "حساب ممکن است ساخته شده باشد، اما نشست ورود ایجاد نشده است. تنظیم تأیید ایمیل و پیام‌های Supabase را بررسی کنید."
+          );
+          return;
+        }
+
+        if (!result.data.session) {
+          throw new Error("ورود کامل نشد؛ نشست کاربری دریافت نشد.");
+        }
+
+        $("welcome").textContent =
+          "خوش آمدی، " + username + "!";
+        $("auth").classList.add("hidden");
+        $("home").classList.remove("hidden");
+
+      } catch (error) {
+        console.error("Auth error:", error);
+        showMessage("خطا: " + (error.message || "عملیات انجام نشد."));
+      } finally {
+        busy = false;
+        $("submitBtn").disabled = false;
+        $("switchBtn").disabled = false;
+        $("submitBtn").textContent = isSignup ? "ساخت حساب" : "ورود";
+      }
+    });
+
+    $("logoutBtn").addEventListener("click", async () => {
+      const { error } = await client.auth.signOut();
+      if (error) {
+        showMessage("خطا در خروج: " + error.message);
+        return;
+      }
+      $("home").classList.add("hidden");
+      $("auth").classList.remove("hidden");
+      $("username").value = "";
+      $("password").value = "";
+      setMode(false);
+    });
+
+    async function restoreSession() {
+      const { data, error } = await client.auth.getSession();
+      if (error) {
+        showMessage("خطا در بررسی نشست: " + error.message);
+        return;
+      }
+      if (data.session) {
+        const username =
+          data.session.user.user_metadata?.username || "کاربر";
+        $("welcome").textContent = "خوش آمدی، " + username + "!";
+        $("auth").classList.add("hidden");
+        $("home").classList.remove("hidden");
+      }
+    }
+
+    setMode(false);
+    restoreSession();
+  </script>
+</body>
+</html>
