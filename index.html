@@ -1,0 +1,285 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>زبان شیرین | ورود و ثبت‌نام</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #e8f0ff, #f8edff);
+      font-family: Tahoma, Arial, sans-serif;
+      color: #20243a;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      padding: 28px;
+      border-radius: 22px;
+      background: white;
+      box-shadow: 0 12px 40px #18254a18;
+    }
+    h1 { text-align: center; margin-top: 0; }
+    .subtitle { text-align: center; color: #687086; }
+    label { display: block; margin: 16px 0 7px; }
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #d7dbea;
+      border-radius: 10px;
+      font: inherit;
+      direction: ltr;
+      text-align: left;
+    }
+    button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 13px;
+      border: 0;
+      border-radius: 10px;
+      background: #4e54d8;
+      color: white;
+      font: inherit;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #edf0ff;
+      color: #3439a0;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    #message {
+      margin-top: 16px;
+      line-height: 1.9;
+      overflow-wrap: anywhere;
+    }
+    #app { display: none; text-align: center; }
+    .hint { font-size: 12px; color: #72788b; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <section id="auth">
+      <h1>زبان شیرین 🍃</h1>
+      <p class="subtitle">ورود و ثبت‌نام با نام کاربری</p>
+
+      <form id="authForm">
+        <label for="username">نام کاربری</label>
+        <input
+          id="username"
+          name="username"
+          autocomplete="username"
+          minlength="3"
+          maxlength="24"
+          pattern="[A-Za-z0-9_]{3,24}"
+          placeholder="مثلاً kian_123"
+          required
+        >
+
+        <label for="password">رمز عبور</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          minlength="10"
+          placeholder="حداقل ۱۰ کاراکتر"
+          required
+        >
+
+        <button id="loginBtn" type="submit">ورود</button>
+        <button id="registerBtn" class="secondary" type="button">
+          ساخت حساب جدید
+        </button>
+      </form>
+
+      <p class="hint">
+        نام کاربری فقط شامل حروف انگلیسی، عدد و زیرخط باشد.
+        رمز عبور خود را در اختیار دیگران قرار ندهید.
+      </p>
+      <div id="message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="app">
+      <h1>به زبان شیرین خوش آمدی! 🎉</h1>
+      <p id="welcome"></p>
+      <p>ورود شما با موفقیت انجام شد.</p>
+      <button id="logoutBtn">خروج از حساب</button>
+    </section>
+  </main>
+
+  <script>
+    // اطلاعات عمومی پروژه Supabase
+    const SUPABASE_URL =
+      "https://utirkktakivedceofjsx.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_OnohhOvPSYeojddzVbmqHg_TpEChyOT";
+
+    const supabase = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    const authSection = document.getElementById("auth");
+    const appSection = document.getElementById("app");
+    const form = document.getElementById("authForm");
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+    const message = document.getElementById("message");
+    const loginBtn = document.getElementById("loginBtn");
+    const registerBtn = document.getElementById("registerBtn");
+
+    function showMessage(text, isError = false) {
+      message.textContent = text;
+      message.style.color = isError ? "#b42318" : "#177245";
+    }
+
+    function normalizeUsername(value) {
+      return value.trim().toLowerCase();
+    }
+
+    function validateCredentials(username, password) {
+      if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+        throw new Error(
+          "نام کاربری باید ۳ تا ۲۴ حرف انگلیسی، عدد یا زیرخط باشد."
+        );
+      }
+
+      if (password.length < 10) {
+        throw new Error("رمز عبور باید حداقل ۱۰ کاراکتر باشد.");
+      }
+    }
+
+    // ایمیل داخلی برای استفاده از Supabase Auth.
+    // این دامنه ساختگی است و صندوق دریافت ندارد.
+    function usernameToInternalEmail(username) {
+      return normalizeUsername(username) + "@username.zaban-shirin.invalid";
+    }
+
+    function showApp(username) {
+      authSection.style.display = "none";
+      appSection.style.display = "block";
+      document.getElementById("welcome").textContent =
+        "سلام " + username + " عزیز";
+    }
+
+    function showAuth() {
+      appSection.style.display = "none";
+      authSection.style.display = "block";
+    }
+
+    async function withLoading(button, task) {
+      button.disabled = true;
+      loginBtn.disabled = true;
+      registerBtn.disabled = true;
+
+      try {
+        await task();
+      } catch (error) {
+        showMessage(error.message || "خطایی رخ داد.", true);
+      } finally {
+        button.disabled = false;
+        loginBtn.disabled = false;
+        registerBtn.disabled = false;
+      }
+    }
+
+    async function login(username, password) {
+      validateCredentials(username, password);
+
+      const { data, error } =
+        await supabase.auth.signInWithPassword({
+          email: usernameToInternalEmail(username),
+          password: password
+        });
+
+      if (error) throw error;
+      showApp(username);
+    }
+
+    async function register(username, password) {
+      validateCredentials(username, password);
+
+      const { data, error } = await supabase.auth.signUp({
+        email: usernameToInternalEmail(username),
+        password: password,
+        options: {
+          data: { display_name: username }
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data.session) {
+        showMessage(
+          "حساب ایجاد شد، اما ورود خودکار انجام نشد. تنظیمات تأیید حساب در Supabase را بررسی کن.",
+          true
+        );
+        return;
+      }
+
+      showApp(username);
+    }
+
+    form.addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const username = normalizeUsername(usernameInput.value);
+      const password = passwordInput.value;
+
+      await withLoading(loginBtn, async function() {
+        await login(username, password);
+      });
+    });
+
+    registerBtn.addEventListener("click", async function() {
+      const username = normalizeUsername(usernameInput.value);
+      const password = passwordInput.value;
+
+      await withLoading(registerBtn, async function() {
+        await register(username, password);
+      });
+    });
+
+    document.getElementById("logoutBtn").addEventListener(
+      "click",
+      async function() {
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+          alert("خروج انجام نشد: " + error.message);
+          return;
+        }
+
+        passwordInput.value = "";
+        showAuth();
+        showMessage("از حساب خارج شدی.");
+      }
+    );
+
+    // بازیابی وضعیت ورود قبلی
+    async function restoreSession() {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error || !data.session) return;
+
+      const user = data.session.user;
+      const username =
+        user.user_metadata?.display_name ||
+        (user.email || "").split("@")[0];
+
+      showApp(username);
+    }
+
+    restoreSession();
+  </script>
+</body>
+</html>
