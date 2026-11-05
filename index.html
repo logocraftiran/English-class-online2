@@ -188,7 +188,7 @@
           <button onclick="addSlide()">➕ اسلاید</button>
           <button onclick="deleteSlide()" class="danger">🗑️</button>
           <span style="width:1px;height:22px;background:#334155;margin:0 6px;"></span>
-          <!-- 🔧 دکمه تمام صفحه تخته -->
+          <!-- دکمه تمام صفحه تخته -->
           <button onclick="toggleFullscreenBoard()" class="success" id="btnFullscreen" style="font-weight:bold;">⛶ تمام صفحه</button>
         </div>
         
@@ -388,6 +388,7 @@ function deleteUser(name){
    ========================================================= */
 let currentClass = null, localStream = null, micOn = true, camOn = true, facingMode = 'user';
 let recorder = null, recordedChunks = [], isRecording = false;
+let screenStream = null; // برای ذخیره استریم صفحه
 
 async function enterRoom(className, isTeacher){
   currentClass = className;
@@ -398,7 +399,6 @@ async function enterRoom(className, isTeacher){
   document.getElementById('chatBox').innerHTML = '';
   addClassMsg('system', `به کلاس «${className}» خوش آمدی${isTeacher?' (معلم)':''}`);
 
-  // اطمینان از اینکه تخته توی حالت عادی باز میشه
   document.getElementById('boardContainer').classList.remove('fullscreen');
   document.getElementById('sidebar').style.display = 'flex';
   document.getElementById('videoArea').style.display = 'flex';
@@ -441,7 +441,6 @@ async function rotateCam(){
    ========================================================= */
 const board = { canvas:null, ctx:null, tool:'pen', color:'#2563eb', width:4, drawing:false, startX:0, startY:0, snapshot:null, slides:[], currentSlide:0, selectedText:null, draggingText:false, dragOffsetX:0, dragOffsetY:0, initialized:false };
 
-// 🔧 تابع دکمه تمام صفحه
 function toggleFullscreenBoard(){
   const container = document.getElementById('boardContainer');
   const sidebar = document.getElementById('sidebar');
@@ -452,7 +451,6 @@ function toggleFullscreenBoard(){
   const isFullscreen = container.classList.toggle('fullscreen');
 
   if(isFullscreen){
-    // حالت تمام صفحه: بقیه چیزا مخفی بشن
     sidebar.style.display = 'none';
     videos.style.display = 'none';
     controls.style.display = 'none';
@@ -460,7 +458,6 @@ function toggleFullscreenBoard(){
     btn.classList.add('danger');
     btn.classList.remove('success');
   } else {
-    // برگشت به حالت عادی
     sidebar.style.display = 'flex';
     videos.style.display = 'flex';
     controls.style.display = 'flex';
@@ -469,7 +466,6 @@ function toggleFullscreenBoard(){
     btn.classList.remove('danger');
   }
 
-  // ری‌سایز کانواس بعد از تغییر حالت
   setTimeout(() => {
     resizeCanvas();
     renderSlide(board.currentSlide);
@@ -663,31 +659,82 @@ function deleteSlide(){ if(board.slides.length<=1){ alert('حداقل یک اس�
 function clearBoard(){ const slide=board.slides[board.currentSlide]; slide.imageData=null; slide.texts=[]; renderSlide(board.currentSlide); }
 
 /* =========================================================
-   ضبط کلاس
+   🎥 ضبط کلاس (تصویر کل صفحه + صدای میکروفون)
    ========================================================= */
 function toggleRecord(){
   const btn = document.getElementById('btnRec');
+  
   if(!isRecording){
-    if(!localStream){ alert('ابتدا دوربین را روشن کن'); return; }
-    recordedChunks = [];
-    try{ recorder = new MediaRecorder(localStream, { mimeType:'video/webm' }); }
-    catch(e){ alert('مرورگر از ضبط پشتیبانی نمی‌کند'); return; }
-    recorder.ondataavailable = e => { if(e.data.size>0) recordedChunks.push(e.data); };
-    recorder.onstop = async () => {
-      const blob = new Blob(recordedChunks, { type:'video/webm' });
-      const filename = `class-${currentClass}-${Date.now()}.webm`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-      addClassMsg('system', '✅ ضبط کلاس ذخیره شد. فایل به صورت خودکار دانلود شد.');
-    };
-    recorder.start();
-    isRecording = true; btn.classList.add('rec'); btn.innerHTML = '⏹️ توقف ضبط';
-    addClassMsg('system', '⏺️ ضبط کلاس شروع شد...');
+    // 🔧 درخواست ضبط صفحه از مرورگر (کل تب یا کل صفحه)
+    navigator.mediaDevices.getDisplayMedia({ 
+      video: { cursor: "always" }, 
+      audio: false // صدای سیستم رو نمی‌گیریم، فقط صدای میکروفون خودمون رو اضافه میکنیم
+    })
+    .then(displayStream => {
+      screenStream = displayStream;
+      recordedChunks = [];
+
+      // ترکیب ویدیوی صفحه با صدای میکروفون
+      const tracks = [...screenStream.getVideoTracks()];
+      if (localStream && localStream.getAudioTracks().length > 0) {
+        tracks.push(localStream.getAudioTracks()[0]);
+      }
+      
+      const combinedStream = new MediaStream(tracks);
+
+      try {
+        recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+      } catch(e) {
+        alert('مرورگر شما از ضبط پشتیبانی نمی‌کند');
+        return;
+      }
+
+      recorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+      
+      recorder.onstop = async () => {
+        // آزادسازی استریم صفحه بعد از توقف
+        screenStream.getTracks().forEach(t => t.stop());
+
+        const blob = new Blob(recordedChunks, { type:'video/webm' });
+        const filename = `class-${currentClass}-${Date.now()}.webm`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+        addClassMsg('system', '✅ ضبط کلاس (تصویر کل صفحه و صدا) ذخیره شد.');
+        
+        if(supabaseClient){
+          try{
+            const { error } = await supabaseClient.storage.from('class-recordings').upload(`recordings/${filename}`, blob, { contentType:'video/webm', upsert:true });
+            if(!error) addClassMsg('system', '☁️ ضبط در فضای ابری Supabase ذخیره شد.');
+          }catch(e){ console.warn(e); }
+        }
+      };
+
+      // اگر کاربر روی دکمه‌ی "توقف اشتراک‌گذاری" در خود مرورگر کلیک کرد
+      screenStream.getVideoTracks()[0].onended = () => {
+        if (isRecording) toggleRecord(); // توقف ضبط
+      };
+
+      recorder.start();
+      isRecording = true; 
+      btn.classList.add('rec'); 
+      btn.innerHTML = '⏹️ توقف ضبط';
+      addClassMsg('system', '⏺️ ضبط شروع شد. (تصویر و تغییرات کلاس در حال ضبط است)');
+      
+    })
+    .catch(err => {
+      console.warn("Screen share error:", err);
+      addClassMsg('system', '⚠️ ضبط صفحه لغو شد یا مرورگر از آن پشتیبانی نمی‌کند.');
+    });
+
   } else {
-    recorder.stop();
-    isRecording = false; btn.classList.remove('rec'); btn.innerHTML = '⏺️ ضبط کلاس';
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+    isRecording = false; 
+    btn.classList.remove('rec'); 
+    btn.innerHTML = '⏺️ ضبط کلاس';
   }
 }
 
@@ -701,7 +748,14 @@ function sendGroup(){ const inp=document.getElementById('groupInput'); const tex
 function addGroupMsg(who,text,autoScroll=true){ const box=document.getElementById('groupBox'); const div=document.createElement('div'); div.className='msg '+(who===currentUser?'me':'other'); div.innerHTML=`<span class="who">${who==='system'?'سیستم':who}</span>${escapeHtml(text)}`; box.appendChild(div); if(autoScroll) box.scrollTop=box.scrollHeight; }
 function escapeHtml(s){ return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function switchSide(side){ const chat=side==='chat'; document.getElementById('chatPanel').classList.toggle('hidden',!chat); document.getElementById('groupPanel').classList.toggle('hidden',chat); document.getElementById('tabChatBtn').classList.toggle('active',chat); document.getElementById('tabGroupBtn').classList.toggle('active',!chat); }
-function leaveRoom(){ if(isRecording&&recorder) recorder.stop(); if(localStream) localStream.getTracks().forEach(t=>t.stop()); localStream=null; currentClass=null; document.getElementById('roomPage').classList.add('hidden'); enterHome(); }
+function leaveRoom(){ 
+  if(isRecording && recorder && recorder.state !== 'inactive') recorder.stop(); 
+  if(screenStream) screenStream.getTracks().forEach(t=>t.stop());
+  if(localStream) localStream.getTracks().forEach(t=>t.stop()); 
+  localStream=null; screenStream=null; currentClass=null; 
+  document.getElementById('roomPage').classList.add('hidden'); 
+  enterHome(); 
+}
 
 /* =========================================================
    راه‌اندازی
