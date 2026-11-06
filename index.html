@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>زبان شیرین</title>
+
+<link rel="stylesheet" href="https://esm.sh/@quickdrawjs/core@0.3.0/quickdraw.css">
+<script type="module">
+  import { createQuickdraw } from 'https://esm.sh/@quickdrawjs/core@0.3.0';
+  window.createQuickdrawBoard = createQuickdraw;
+</script>
+
+<style>
+  * { box-sizing: border-box; font-family: Tahoma, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; background:#eef2f7; color:#222; overflow: hidden; }
+  .hidden { display:none !important; }
+  button { cursor:pointer; border:none; border-radius:8px; padding:10px 16px; background:#2563eb; color:#fff; font-size:14px; transition: 0.2s; }
+  button:hover { background:#1d4ed8; }
+  button:disabled { background:#94a3b8 !important; cursor:not-allowed; opacity:.6; }
+  button.sec { background:#64748b; } button.sec:hover { background:#475569; }
+  button.danger { background:#dc2626; } button.danger:hover { background:#b91c1c; }
+  button.success { background:#16a34a; } button.success:hover { background:#15803d; }
+  input, select { padding:10px; border:1px solid #cbd5e1; border-radius:8px; width:100%; margin-bottom:10px; font-family:inherit; }
+  .card { background:#fff; padding:24px; border-radius:14px; box-shadow:0 4px 20px rgba(0,0,0,.08); max-width:420px; margin:60px auto; }
+  h2 { text-align:center; color:#2563eb; }
+  header { background:#2563eb; color:#fff; padding:14px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; flex-shrink: 0; }
+  header h1 { margin:0; font-size:20px; }
+  nav button { background:transparent; border:1px solid #ffffff55; margin-right:6px; }
+  nav button:hover { background:#ffffff22; }
+  
+  #homePage, #adminPage { height: 100vh; display: flex; flex-direction: column; overflow-y: auto; }
+  .main { padding:30px; max-width:1000px; margin:auto; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
+  .tile { background:#fff; padding:24px; border-radius:14px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,.06); cursor:pointer; transition:.2s; }
+  .tile:hover { transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,.12); }
+  .tile.disabled { opacity:.5; cursor:not-allowed; }
+  .tile .icon { font-size:34px; }
+  .role-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:12px; color:#fff; }
+  .role-student { background:#64748b; } .role-teacher { background:#16a34a; } .role-admin { background:#dc2626; }
+
+  /* =========================================================
+     اتاق کلاس (اصلاح کامل برای موبایل و دسکتاپ)
+     ========================================================= */
+  #roomPage { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background: #0f172a; z-index: 50; }
+  .room-header { background:#1e293b; color:#fff; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0; flex-wrap: wrap; gap: 10px; }
+  .room-body { flex: 1; display: flex; overflow: hidden; position: relative; }
+  
+  .stage { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  
+  /* ویدیوها: ارتفاع ثابت و مشخص برای موبایل و دسکتاپ */
+  .videos { 
+    flex: 0 0 auto; 
+    display: flex; 
+    justify-content: center; 
+    gap: 12px; 
+    padding: 10px; 
+    background: #0f172a; 
+    height: 180px; /* ارتفاع ثابت */
+    overflow-x: auto; 
+    overflow-y: hidden;
+  }
+  .video-box { width: 240px; height: 150px; background:#1e293b; border-radius:12px; position:relative; overflow:hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3); flex-shrink: 0; }
+  .video-box video { width:100%; height:100%; object-fit:cover; transform: scaleX(-1); }
+  .video-box .label { position:absolute; bottom:6px; right:8px; color:#fff; background:#00000088; padding:2px 8px; border-radius:6px; font-size:12px; }
+
+  /* تخته: پر کردن فضای باقی مانده با absolute */
+  #boardContainer {
+    flex: 1; 
+    position: relative; 
+    background: #0f172a; /* همرنگ با پس‌زمینه تا اگر لود نشد سیاه نباشه */
+    margin: 5px; 
+    border-radius: 10px; 
+    overflow: hidden; 
+    box-shadow: 0 0 0 2px #334155;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #boardContainer.board-collapsed { display: none !important; }
+
+  #boardContainer.fullscreen {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; margin: 0; border-radius: 0; z-index: 9999; box-shadow: none;
+  }
+
+  .slide-nav { display:flex; gap:6px; align-items:center; justify-content:center; background:#0f172a; color:#fff; padding:6px 10px; font-size:13px; flex-wrap:wrap; flex-shrink:0; }
+  .slide-nav button { background:#334155; padding:5px 10px; font-size:13px; }
+  .slide-nav button:hover { background:#475569; }
+  .slide-nav .slide-info { min-width:120px; text-align:center; font-weight:bold; }
+
+  /* 🔧 اصلاح اصلی: استفاده از absolute برای پر کردن فضا در مرورگرهای موبایل */
+  #board-area-container {
+    position: absolute;
+    top: 40px; /* ارتفاع نوار بالای تخته */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .controls { background:#1e293b; padding:12px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap; flex-shrink:0; z-index:10; }
+  .controls button { background:#334155; }
+  .controls button.active { background:#16a34a; }
+  .controls button.rec { background:#dc2626; animation:pulse 1s infinite; }
+  @keyframes pulse { 50%{opacity:.6;} }
+
+  /* پنل چت */
+  .sidebar-wrap { position: relative; display: flex; width: 320px; flex-shrink: 0; transition: width 0.3s ease; background:#f8fafc; border-right:1px solid #e2e8f0; z-index: 20; }
+  .sidebar-wrap.collapsed { width: 0; border-right: none; overflow: hidden; }
+  .sidebar { flex: 1; display:flex; flex-direction:column; overflow: hidden; }
+  .sidebar-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: #e2e8f0; border-bottom: 1px solid #cbd5e1; }
+  .sidebar-header span { font-weight: bold; color: #334155; font-size: 13px; }
+  .sidebar-header button { background: #64748b; padding: 4px 8px; font-size: 14px; border-radius: 4px; }
+
+  .tabs { display:flex; flex-shrink: 0; } 
+  .tabs button { flex:1; border-radius:0; background:#e2e8f0; color:#334155; border-bottom: 1px solid #cbd5e1;} 
+  .tabs button.active { background:#2563eb; color:#fff; border-color: #2563eb; }
+  
+  .chat-box { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; background: #f8fafc; }
+  .msg { padding:8px 12px; border-radius:10px; max-width:85%; font-size:13px; line-height: 1.5; word-break: break-word; } 
+  .msg.me { background:#2563eb; color:#fff; align-self:flex-end; border-bottom-right-radius: 0; } 
+  .msg.other { background:#e2e8f0; align-self:flex-start; border-bottom-left-radius: 0; } 
+  .msg .who { font-size:11px; opacity:.7; display:block; margin-bottom: 2px; }
+  .msg img, .msg video { max-width: 100%; border-radius: 6px; margin-top: 4px; display: block; }
+  .msg audio { max-width: 100%; margin-top: 4px; display: block; }
+  
+  .chat-input { display:flex; padding:10px; gap:6px; border-top:1px solid #e2e8f0; flex-shrink: 0; background: #fff; align-items: center; } 
+  .chat-input input { margin:0; border-radius: 20px; padding: 10px 15px; }
+  .chat-input button { padding: 10px; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .chat-input button.attach { background: #64748b; }
+  .chat-input button.send { background: #2563eb; }
+  .chat-input button.mic { background: #16a34a; }
+  .chat-input button.mic.recording { background: #dc2626; animation: pulse 1s infinite; }
+
+  #floatingChatBtn { position: fixed; bottom: 20px; right: 20px; z-index: 100; width: 60px; height: 60px; border-radius: 50%; font-size: 26px; background: #2563eb; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; align-items: center; justify-content: center; padding: 0; }
+  #floatingChatBtn.show { display: flex; }
+  
+  #floatingBoardBtn { position: fixed; bottom: 20px; left: 20px; z-index: 100; width: 60px; height: 60px; border-radius: 50%; font-size: 26px; background: #16a34a; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; align-items: center; justify-content: center; padding: 0; }
+  #floatingBoardBtn.show { display: flex; }
+
+  .modal-bg { position:fixed; inset:0; background:#00000088; display:flex; align-items:center; justify-content:center; z-index:10000; }
+  .modal-bg .card p { line-height:1.8; font-size:14px; } .modal-btns { display:flex; gap:10px; margin-top:10px; } .modal-btns button { flex:1; } .modal-btns .yes { background:#16a34a; } .modal-btns .no { background:#dc2626; }
+  
+  .admin-panel { max-width:900px; margin:30px auto; padding: 0 20px; } 
+  table { width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.06); } 
+  th, td { padding:12px; text-align:right; border-bottom:1px solid #e2e8f0; font-size:14px; } 
+  th { background:#f1f5f9; } tr:last-child td { border-bottom:none; }
+  .admin-actions { display:flex; gap:6px; } .admin-actions button { padding:5px 10px; font-size:12px; } .admin-actions select { width:auto; margin:0; padding:5px; font-size:12px; }
+
+  /* =========================================================
+     تنظیمات مخصوص موبایل
+     ========================================================= */
+  @media (max-width: 768px) {
+    .room-header { padding: 10px; flex-direction: column; align-items: stretch; }
+    .room-header h3 { text-align: center; margin-bottom: 10px; }
+    .room-header div { display: flex; gap: 5px; justify-content: center; }
+    .room-header button { flex: 1; padding: 8px 5px; font-size: 12px; }
+
+    .room-body { flex-direction: column; }
+    
+    /* در موبایل ارتفاع ویدیو کمتر میشه */
+    .videos { height: 120px; padding: 5px; }
+    .video-box { width: 160px; height: 110px; }
+    
+    /* در موبایل ارتفاع نوار بالای تخته کمتره */
+    #board-area-container { top: 36px; }
+    
+    .sidebar-wrap { width: 100%; height: 40%; border-right: none; border-top: 1px solid #e2e8f0; }
+    .sidebar-wrap.collapsed { height: 0; border-top: none; width: 100%; }
+    .controls button { padding: 8px; font-size: 12px; flex: 1 1 30%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ورود / ثبت‌نام -->
+<div id="authPage" style="height: 100vh; overflow-y: auto;">
+  <div class="card">
+    <h2>🌿 زبان شیرین</h2>
+    <div id="authMsg" style="color:#dc2626;text-align:center;font-size:13px;min-height:18px;"></div>
+    <input id="authUser" placeholder="نام کاربری">
+    <input id="authPass" type="password" placeholder="رمز عبور">
+    <button onclick="doAuth('login')" style="width:100%;margin-bottom:8px;">ورود</button>
+    <button class="sec" onclick="doAuth('signup')" style="width:100%;margin-bottom:8px;">ثبت‌نام</button>
+    <hr style="margin:14px 0;border:none;border-top:1px solid #e2e8f0;">
+    <button class="danger" onclick="doAuth('admin')" style="width:100%;">🔐 ورود به حساب مدیریت</button>
+  </div>
+</div>
+
+<!-- صفحه اصلی -->
+<div id="homePage" class="hidden">
+  <header><h1>🌿 زبان شیرین</h1><nav><span id="userLabel" style="margin-left:12px;font-size:13px;"></span><button onclick="logout()" class="danger">خروج</button></nav></header>
+  <div class="main">
+    <h3>خوش آمدی <span id="welcomeName"></span> 👋</h3>
+    <p style="font-size:13px;color:#64748b;">نقش شما: <span id="myRole"></span></p>
+    <div class="grid">
+      <div class="tile" id="tileCreateClass" onclick="tryCreateClass()"><div class="icon">➕</div><h4>ساخت کلاس</h4><p style="font-size:12px;color:#64748b;" id="createClassHint">کلاس جدید با رمز بساز</p></div>
+      <div class="tile" onclick="openModal('joinClassModal')"><div class="icon">🚪</div><h4>ورود به کلاس</h4><p style="font-size:12px;color:#64748b;">با رمز کلاس وارد شو</p></div>
+      <div class="tile" onclick="openGroupChat()"><div class="icon">💬</div><h4>گروه گفتگو</h4><p style="font-size:12px;color:#64748b;">چت با معلم و هم‌کلاسی‌ها</p></div>
+      <div class="tile" onclick="openModal('accountModal')"><div class="icon">👤</div><h4>حساب کاربری</h4><p style="font-size:12px;color:#64748b;">مشاهده اطلاعات حساب</p></div>
+      <div class="tile" id="tileAdmin" onclick="openAdminPanel()" style="display:none;border:2px solid #dc2626;"><div class="icon">🛡️</div><h4>پنل مدیریت</h4><p style="font-size:12px;color:#dc2626;">مدیریت کاربران</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- پنل مدیریت -->
+<div id="adminPage" class="hidden">
+  <header><h1>🛡️ پنل مدیریت</h1><nav><span style="margin-left:12px;font-size:13px;">مدیر: <span id="adminName"></span></span><button onclick="backToHome()" class="sec">↩ بازگشت</button></nav></header>
+  <div class="admin-panel"><h3>مدیریت کاربران</h3><table><thead><tr><th>#</th><th>نام کاربری</th><th>نقش</th><th>تغییر نقش</th><th>عملیات</th></tr></thead><tbody id="usersBody"></tbody></table></div>
+</div>
+
+<!-- اتاق کلاس -->
+<div id="roomPage" class="hidden">
+  <div class="room-header">
+    <h3 id="roomTitle">کلاس</h3>
+    <div>
+      <button class="success" onclick="toggleBoardCollapse()" id="btnToggleBoard">🖊️ مخفی کردن تخته</button>
+      <button class="danger" onclick="leaveRoom()">🚪 خروج از کلاس</button>
+    </div>
+  </div>
+  
+  <div class="room-body" id="roomBody">
+    <div class="stage" id="stage">
+      <!-- ویدیوها -->
+      <div class="videos" id="videoArea">
+        <div class="video-box"><video id="localVideo" autoplay muted playsinline></video><span class="label">شما</span></div>
+      </div>
+      
+      <!-- تخته -->
+      <div id="boardContainer">
+        <div class="slide-nav">
+          <span style="font-weight:bold; color:#94a3b8;">تخته سفید تعاملی</span>
+          <span style="width:1px;height:22px;background:#334155;margin:0 6px;"></span>
+          <button onclick="toggleFullscreenBoard()" class="success" id="btnFullscreen" style="font-weight:bold;">⛶ تمام صفحه</button>
+        </div>
+        
+        <div id="board-area-container"></div>
+      </div>
+
+      <div class="controls">
+        <button id="btnMic" onclick="toggleMic()">🎤 میکروفون</button>
+        <button id="btnCam" onclick="toggleCam()">📷 دوربین</button>
+        <button id="btnRotate" onclick="rotateCam()">🔄 چرخش</button>
+        <button id="btnRec" onclick="toggleRecord()">⏺️ ضبط کلاس</button>
+      </div>
+    </div>
+    
+    <!-- پنل چت -->
+    <div class="sidebar-wrap" id="sidebarWrap">
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <span>گفتگو</span>
+          <button onclick="toggleChatCollapse()" title="بستن چت">✖</button>
+        </div>
+        <div class="tabs">
+          <button id="tabChatBtn" class="active" onclick="switchSide('chat')">چت کلاس</button>
+          <button id="tabGroupBtn" onclick="switchSide('group')">گروه</button>
+        </div>
+        
+        <div id="chatPanel" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+          <div class="chat-box" id="chatBox"></div>
+          <div class="chat-input">
+            <button class="attach" onclick="document.getElementById('chatFile').click()" title="ارسال فایل">📎</button>
+            <input type="file" id="chatFile" class="hidden" accept="image/*,video/*,audio/*" onchange="handleChatFile(this)">
+            <button class="mic" id="btnChatMic" onclick="toggleChatVoice()" title="ضبط ویس">🎤</button>
+            <input id="chatInput" placeholder="پیام..." onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="send" onclick="sendChat()" title="ارسال">➤</button>
+          </div>
+        </div>
+        
+        <div id="groupPanel" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+          <div class="chat-box" id="groupBox"></div>
+          <div class="chat-input">
+            <input id="groupInput" placeholder="پیام به گروه..." onkeydown="if(event.key==='Enter')sendGroup()">
+            <button class="send" onclick="sendGroup()">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- دکمه‌های شناور -->
+<button id="floatingChatBtn" onclick="toggleChatCollapse()" title="باز کردن چت">💬</button>
+<button id="floatingBoardBtn" onclick="toggleBoardCollapse()" title="باز کردن تخته">🖊️</button>
+
+<!-- مدال‌ها -->
+<div id="createClassModal" class="modal-bg hidden"><div class="card"><h2>ساخت کلاس</h2><input id="newClassName" placeholder="نام کلاس"><input id="newClassPass" type="password" placeholder="رمز کلاس"><button onclick="createClass()" style="width:100%;margin-bottom:8px;">ساخت و ورود</button><button class="sec" onclick="closeModal('createClassModal')" style="width:100%;">انصراف</button></div></div>
+<div id="joinClassModal" class="modal-bg hidden"><div class="card"><h2>ورود به کلاس</h2><input id="joinClassName" placeholder="نام کلاس"><input id="joinClassPass" type="password" placeholder="رمز کلاس"><button onclick="joinClass()" style="width:100%;margin-bottom:8px;">ورود</button><button class="sec" onclick="closeModal('joinClassModal')" style="width:100%;">انصراف</button></div></div>
+<div id="accountModal" class="modal-bg hidden"><div class="card"><h2>حساب کاربری</h2><p><b>نام کاربری:</b> <span id="accUser"></span></p><p><b>نقش:</b> <span id="accRole"></span></p><p><b>کلاس‌های ساخته‌شده:</b> <span id="accClasses"></span></p><button class="sec" onclick="closeModal('accountModal')" style="width:100%;">بستن</button></div></div>
+<div id="permissionModal" class="modal-bg hidden"><div class="card"><h2>🔐 اجازه دسترسی</h2><p>برای شرکت در کلاس، سایت نیاز به دسترسی به <b>دوربین</b> و <b>میکروفون</b> شما دارد. آیا اجازه می‌دهید؟</p><div class="modal-btns"><button class="yes" onclick="answerPermission(true)">✅ بله</button><button class="no" onclick="answerPermission(false)">❌ خیر</button></div></div></div>
+
+<script>
+/* =========================================================
+   دیتابیس
+   ========================================================= */
+const ADMIN_USER = 'admin', ADMIN_PASS = '123456';
+function initDB(){
+  if(!localStorage.getItem('zs_users')){
+    localStorage.setItem('zs_users', JSON.stringify({ [ADMIN_USER]: { pass: ADMIN_PASS, role: 'admin' } }));
+  } else {
+    const u = JSON.parse(localStorage.getItem('zs_users'));
+    if(!u[ADMIN_USER]){ u[ADMIN_USER] = { pass: ADMIN_PASS, role: 'admin' }; localStorage.setItem('zs_users', JSON.stringify(u)); }
+  }
+}
+initDB();
+function getUsers(){ return JSON.parse(localStorage.getItem('zs_users')||'{}'); }
+function saveUsers(u){ localStorage.setItem('zs_users', JSON.stringify(u)); }
+function getRoleLabel(r){ return r==='admin'?'مدیر':r==='teacher'?'معلم':'دانش‌آموز'; }
+function getRoleBadge(r){ const c=r==='admin'?'role-admin':r==='teacher'?'role-teacher':'role-student'; return `<span class="role-badge ${c}">${getRoleLabel(r)}</span>`; }
+
+/* =========================================================
+   احراز هویت
+   ========================================================= */
+let currentUser = null, currentRole = 'student';
+function doAuth(type){
+  const u = document.getElementById('authUser').value.trim();
+  const p = document.getElementById('authPass').value.trim();
+  const msg = document.getElementById('authMsg');
+  const users = getUsers();
+  if(type==='admin'){
+    if(u !== ADMIN_USER || p !== ADMIN_PASS){ msg.textContent='نام کاربری یا رمز مدیر اشتباه است'; return; }
+    currentUser = ADMIN_USER; currentRole = 'admin'; localStorage.setItem('zs_current', currentUser); enterHome(); return;
+  }
+  if(!u || !p){ msg.textContent='نام کاربری و رمز را وارد کن'; return; }
+  if(type==='signup'){
+    if(users[u]){ msg.textContent='این نام کاربری قبلاً ثبت شده'; return; }
+    users[u] = { pass: p, role: 'student' }; saveUsers(users);
+    msg.style.color='#16a34a'; msg.textContent='ثبت‌نام موفق! حالا وارد شو'; return;
+  }
+  if(!users[u] || users[u].pass !== p){ msg.textContent='نام کاربری یا رمز اشتباه است'; return; }
+  currentUser = u; currentRole = users[u].role || 'student'; localStorage.setItem('zs_current', currentUser); enterHome();
+}
+function enterHome(){
+  document.getElementById('authPage').classList.add('hidden');
+  document.getElementById('adminPage').classList.add('hidden');
+  document.getElementById('roomPage').classList.add('hidden');
+  document.getElementById('homePage').classList.remove('hidden');
+  
+  document.getElementById('userLabel').innerHTML = `👤 ${currentUser} ${getRoleBadge(currentRole)}`;
+  document.getElementById('welcomeName').textContent = currentUser;
+  document.getElementById('myRole').innerHTML = getRoleBadge(currentRole);
+  const canCreate = currentRole==='teacher' || currentRole==='admin';
+  document.getElementById('tileCreateClass').classList.toggle('disabled', !canCreate);
+  document.getElementById('createClassHint').textContent = canCreate ? 'کلاس جدید با رمز بساز' : '🔒 فقط معلم و مدیر';
+  document.getElementById('tileAdmin').style.display = currentRole==='admin' ? 'block' : 'none';
+}
+function logout(){ currentUser=null; currentRole='student'; localStorage.removeItem('zs_current'); location.reload(); }
+
+function openModal(id){
+  if(id==='accountModal'){
+    document.getElementById('accUser').textContent = currentUser;
+    document.getElementById('accRole').innerHTML = getRoleBadge(currentRole);
+    const all = JSON.parse(localStorage.getItem('zs_classes')||'{}');
+    document.getElementById('accClasses').textContent = Object.values(all).filter(c=>c.teacher===currentUser).length;
+  }
+  document.getElementById(id).classList.remove('hidden');
+}
+function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
+
+/* =========================================================
+   ساخت / ورود کلاس
+   ========================================================= */
+function tryCreateClass(){
+  if(currentRole!=='teacher' && currentRole!=='admin'){ alert('🔒 فقط معلم‌ها و مدیر می‌تونن کلاس بسازن.'); return; }
+  openModal('createClassModal');
+}
+function createClass(){
+  const name = document.getElementById('newClassName').value.trim();
+  const pass = document.getElementById('newClassPass').value.trim();
+  if(!name || !pass){ alert('نام و رمز کلاس را وارد کن'); return; }
+  const classes = JSON.parse(localStorage.getItem('zs_classes')||'{}');
+  classes[name] = { teacher: currentUser, password: pass };
+  localStorage.setItem('zs_classes', JSON.stringify(classes));
+  closeModal('createClassModal'); enterRoom(name, true);
+}
+function joinClass(){
+  const name = document.getElementById('joinClassName').value.trim();
+  const pass = document.getElementById('joinClassPass').value.trim();
+  const classes = JSON.parse(localStorage.getItem('zs_classes')||'{}');
+  if(!classes[name]){ alert('کلاسی با این نام وجود ندارد'); return; }
+  if(classes[name].password !== pass){ alert('رمز کلاس اشتباه است'); return; }
+  closeModal('joinClassModal'); enterRoom(name, false);
+}
+
+/* =========================================================
+   پنل مدیریت
+   ========================================================= */
+function openAdminPanel(){
+  if(currentRole !== 'admin'){ alert('دسترسی ندارید'); return; }
+  document.getElementById('homePage').classList.add('hidden');
+  document.getElementById('adminPage').classList.remove('hidden');
+  document.getElementById('adminName').textContent = currentUser;
+  renderUsersTable();
+}
+function backToHome(){ document.getElementById('adminPage').classList.add('hidden'); enterHome(); }
+function renderUsersTable(){
+  const users = getUsers(); const tbody = document.getElementById('usersBody'); tbody.innerHTML = '';
+  Object.keys(users).forEach((name, idx)=>{
+    const u = users[name]; const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${idx+1}</td><td><b>${name}</b></td><td>${getRoleBadge(u.role||'student')}</td>
+      <td><select onchange="changeRole('${name}', this.value)"><option value="student" ${u.role==='student'?'selected':''}>دانش‌آموز</option><option value="teacher" ${u.role==='teacher'?'selected':''}>معلم</option><option value="admin" ${u.role==='admin'?'selected':''}>مدیر</option></select></td>
+      <td class="admin-actions"><button class="sec" onclick="changePass('${name}')">🔑 رمز</button><button class="danger" onclick="deleteUser('${name}')">🗑️ حذف</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function changeRole(name, role){
+  if(name === ADMIN_USER){ alert('نقش مدیر اصلی قابل تغییر نیست'); renderUsersTable(); return; }
+  const users = getUsers(); if(!users[name]) return;
+  users[name].role = role; saveUsers(users);
+  alert(`نقش «${name}» به ${getRoleLabel(role)} تغییر کرد ✅`);
+  if(name === currentUser){ currentRole = role; enterHome(); }
+  renderUsersTable();
+}
+function changePass(name){
+  const newPass = prompt(`رمز جدید برای «${name}»:`); if(!newPass) return;
+  const users = getUsers(); if(!users[name]) return;
+  users[name].pass = newPass; saveUsers(users); alert('رمز تغییر کرد ✅');
+}
+function deleteUser(name){
+  if(name === ADMIN_USER){ alert('مدیر اصلی حذف نمی‌شه'); return; }
+  if(!confirm(`کاربر «${name}» حذف شود؟`)) return;
+  const users = getUsers(); delete users[name]; saveUsers(users); renderUsersTable();
+}
+
+/* =========================================================
+   اتاق کلاس و اتصال تخته Quickdraw
+   ========================================================= */
+let currentClass = null, localStream = null, micOn = true, camOn = true, facingMode = 'user';
+let recorder = null, recordedChunks = [], isRecording = false;
+let screenStream = null;
+let qdBoard = null;
+
+async function enterRoom(className, isTeacher){
+  currentClass = className;
+  document.getElementById('homePage').classList.add('hidden');
+  document.getElementById('adminPage').classList.add('hidden');
+  document.getElementById('roomPage').classList.remove('hidden');
+  document.getElementById('roomTitle').textContent = 'کلاس: ' + className;
+  document.getElementById('chatBox').innerHTML = '';
+  addClassMsg('system', `به کلاس «${className}» خوش آمدی${isTeacher?' (معلم)':''}`);
+
+  document.getElementById('boardContainer').classList.remove('board-collapsed');
+  document.getElementById('floatingBoardBtn').classList.remove('show');
+  document.getElementById('btnToggleBoard').innerHTML = '🖊️ مخفی کردن تخته';
+  document.getElementById('btnToggleBoard').classList.replace('danger', 'success');
+
+  initQuickdrawBoard();
+  await askPermissionAndStart();
+}
+
+function initQuickdrawBoard() {
+  const container = document.getElementById('board-area-container');
+  if (!container) return;
+  
+  if (qdBoard) {
+    try { qdBoard.destroy(); } catch(e) {}
+    qdBoard = null;
+  }
+  
+  if (!window.createQuickdrawBoard) {
+    console.error('Quickdraw library not loaded.');
+    container.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">
+      <p style="font-size:16px;margin-bottom:10px;">کتابخانه Quickdraw لود نشد.</p>
+      <p style="font-size:12px;color:#64748b;margin-bottom:15px;">لطفاً اتصال اینترنت خود را بررسی کنید.</p>
+      <button onclick="initQuickdrawBoard()" style="padding:10px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;">تلاش مجدد</button>
+    </div>`;
+    return;
+  }
+  
+  try {
+    qdBoard = window.createQuickdrawBoard({
+      container: container,
+      theme: 'light',
+      grid: 'none',
+      watermark: false
+    });
+  } catch (err) {
+    console.error('Error creating Quickdraw board:', err);
+    container.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">
+      <p style="font-size:16px;margin-bottom:10px;">خطا در ساخت تخته</p>
+      <p style="font-size:12px;color:#64748b;margin-bottom:15px;">${err.message}</p>
+      <button onclick="initQuickdrawBoard()" style="padding:10px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;">تلاش مجدد</button>
+    </div>`;
+  }
+}
+
+function toggleBoardCollapse() {
+  const board = document.getElementById('boardContainer');
+  const floatBtn = document.getElementById('floatingBoardBtn');
+  const toggleBtn = document.getElementById('btnToggleBoard');
+  
+  const isCollapsed = board.classList.toggle('board-collapsed');
+  
+  if (isCollapsed) {
+    floatBtn.classList.add('show');
+    toggleBtn.innerHTML = '🖊️ نمایش تخته';
+    toggleBtn.classList.replace('success', 'danger');
+  } else {
+    floatBtn.classList.remove('show');
+    toggleBtn.innerHTML = '🖊️ مخفی کردن تخته';
+    toggleBtn.classList.replace('danger', 'success');
+    
+    if (qdBoard && qdBoard.resize) {
+      setTimeout(() => qdBoard.resize(), 100);
+    }
+  }
+}
+
+/* ---------- مجوز ---------- */
+let pendingPermissionResolve = null;
+function askPermissionAndStart(){ return new Promise(resolve => { pendingPermissionResolve = resolve; openModal('permissionModal'); }); }
+async function answerPermission(allow){
+  closeModal('permissionModal');
+  if(allow){ await startMedia(); }
+  else { addClassMsg('system','⚠️ دسترسی رد شد.'); ['btnMic','btnCam','btnRotate'].forEach(id=>document.getElementById(id).disabled = true); }
+  if(pendingPermissionResolve){ pendingPermissionResolve(); pendingPermissionResolve = null; }
+}
+async function startMedia(){
+  try{
+    localStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+    document.getElementById('localVideo').srcObject = localStream;
+    document.getElementById('btnMic').classList.add('active');
+    document.getElementById('btnCam').classList.add('active');
+  }catch(e){
+    addClassMsg('system','⚠️ خطا در دوربین/میکروفون: ' + e.message);
+    ['btnMic','btnCam','btnRotate'].forEach(id=>document.getElementById(id).disabled = true);
+  }
+}
+function toggleMic(){ if(!localStream) return; micOn=!micOn; localStream.getAudioTracks().forEach(t=>t.enabled=micOn); document.getElementById('btnMic').classList.toggle('active',micOn); }
+function toggleCam(){ if(!localStream) return; camOn=!camOn; localStream.getVideoTracks().forEach(t=>t.enabled=camOn); document.getElementById('btnCam').classList.toggle('active',camOn); }
+async function rotateCam(){
+  facingMode = facingMode==='user'?'environment':'user';
+  if(localStream) localStream.getTracks().forEach(t=>t.stop());
+  try{ localStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode}, audio:true }); document.getElementById('localVideo').srcObject = localStream; }
+  catch(e){ alert('تغییر دوربین ممکن نشد: '+e.message); }
+}
+
+function toggleFullscreenBoard(){
+  const container = document.getElementById('boardContainer');
+  const sidebar = document.getElementById('sidebarWrap');
+  const videos = document.getElementById('videoArea');
+  const controls = document.querySelector('.controls');
+  const btn = document.getElementById('btnFullscreen');
+
+  const isFullscreen = container.classList.toggle('fullscreen');
+
+  if(isFullscreen){
+    sidebar.style.display = 'none';
+    videos.style.display = 'none';
+    controls.style.display = 'none';
+    btn.innerHTML = '✖ خروج از تمام صفحه';
+    btn.classList.add('danger'); btn.classList.remove('success');
+  } else {
+    sidebar.style.display = 'flex';
+    videos.style.display = 'flex';
+    controls.style.display = 'flex';
+    btn.innerHTML = '⛶ تمام صفحه';
+    btn.classList.add('success'); btn.classList.remove('danger');
+  }
+}
+
+function toggleChatCollapse() {
+  const wrap = document.getElementById('sidebarWrap');
+  const floatBtn = document.getElementById('floatingChatBtn');
+  const isCollapsed = wrap.classList.toggle('collapsed');
+  if (isCollapsed) floatBtn.classList.add('show');
+  else floatBtn.classList.remove('show');
+}
+
+function handleChatFile(input) {
+  const file = input.files[0]; if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('حجم فایل نباید بیشتر از ۵ مگابایت باشد.'); input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result; let msgHtml = '';
+    if (file.type.startsWith('image/')) msgHtml = `<img src="${dataUrl}" alt="عکس">`;
+    else if (file.type.startsWith('video/')) msgHtml = `<video src="${dataUrl}" controls></video>`;
+    else if (file.type.startsWith('audio/')) msgHtml = `<audio src="${dataUrl}" controls></audio>`;
+    else msgHtml = `<a href="${dataUrl}" download="${file.name}" style="color:inherit;text-decoration:underline;">📎 ${file.name}</a>`;
+    addClassMsg(currentUser, msgHtml, true); input.value = ''; 
+  };
+  reader.readAsDataURL(file);
+}
+
+let chatMediaRecorder = null; let chatAudioChunks = [];
+function toggleChatVoice() {
+  const btn = document.getElementById('btnChatMic');
+  if (!chatMediaRecorder || chatMediaRecorder.state === 'inactive') {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      chatMediaRecorder = new MediaRecorder(stream); chatAudioChunks = [];
+      chatMediaRecorder.ondataavailable = e => { if(e.data.size > 0) chatAudioChunks.push(e.data); };
+      chatMediaRecorder.onstop = () => {
+        const blob = new Blob(chatAudioChunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        addClassMsg(currentUser, `<audio src="${url}" controls></audio>`, true);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      chatMediaRecorder.start(); btn.classList.add('recording'); btn.innerHTML = '⏹';
+    }).catch(err => alert('دسترسی به میکروفون داده نشد: ' + err.message));
+  } else {
+    chatMediaRecorder.stop(); btn.classList.remove('recording'); btn.innerHTML = '🎤';
+  }
+}
+
+function toggleRecord(){
+  const btn = document.getElementById('btnRec');
+  if(!isRecording){
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      alert('❌ مرورگر شما از ضبط صفحه پشتیبانی نمی‌کند.\nلطفاً از Google Chrome نسخه ۱۰۹ یا بالاتر استفاده کنید.');
+      return;
+    }
+    navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+    .then(displayStream => {
+      screenStream = displayStream; recordedChunks = [];
+      let tracks = [...screenStream.getVideoTracks()];
+      if (localStream) {
+        const audioTracks = localStream.getAudioTracks();
+        if (audioTracks.length > 0) tracks.push(audioTracks[0]);
+      }
+      const combinedStream = new MediaStream(tracks);
+      let mimeType = 'video/webm';
+      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mimeType = 'video/webm;codecs=vp9';
+      else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) mimeType = 'video/webm;codecs=vp8';
+      try { recorder = new MediaRecorder(combinedStream, { mimeType: mimeType }); }
+      catch(e) { alert('خطا در راه‌اندازی ضبط: ' + e.message); screenStream.getTracks().forEach(t => t.stop()); return; }
+      recorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+      recorder.onstop = () => {
+        screenStream.getTracks().forEach(t => t.stop()); screenStream = null;
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `class-${currentClass}-${Date.now()}.webm`; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        addClassMsg('system', '✅ ضبط کلاس ذخیره شد.');
+      };
+      screenStream.getVideoTracks()[0].onended = () => { if (isRecording) toggleRecord(); };
+      recorder.start(1000);
+      isRecording = true; btn.classList.add('rec'); btn.innerHTML = '⏹️ توقف ضبط';
+      addClassMsg('system', '⏺️ ضبط شروع شد.');
+    }).catch(err => { addClassMsg('system', '⚠️ ضبط لغو شد.'); });
+  } else {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    isRecording = false; btn.classList.remove('rec'); btn.innerHTML = '⏺️ ضبط کلاس';
+  }
+}
+
+function sendChat(){ const inp=document.getElementById('chatInput'); const text=inp.value.trim(); if(!text) return; addClassMsg(currentUser,text, false); inp.value=''; }
+function addClassMsg(who, content, isHtml = false){
+  const box=document.getElementById('chatBox'); const div=document.createElement('div'); div.className='msg '+(who===currentUser?'me':'other'); 
+  const safeContent = isHtml ? content : escapeHtml(content);
+  div.innerHTML=`<span class="who">${who==='system'?'سیستم':who}</span>${safeContent}`; 
+  box.appendChild(div); box.scrollTop=box.scrollHeight; 
+}
+function openGroupChat(){ const box=document.getElementById('groupBox'); if(!box.children.length){ const msgs=JSON.parse(localStorage.getItem('zs_group')||'[]'); msgs.slice(-30).forEach(m=>addGroupMsg(m.who,m.text,false)); if(!msgs.length) addGroupMsg('system','به گروه گفتگو خوش آمدی!',false); } switchSide('group'); }
+function sendGroup(){ const inp=document.getElementById('groupInput'); const text=inp.value.trim(); if(!text) return; const msgs=JSON.parse(localStorage.getItem('zs_group')||'[]'); msgs.push({who:currentUser,text}); localStorage.setItem('zs_group',JSON.stringify(msgs)); addGroupMsg(currentUser,text,true); inp.value=''; }
+function addGroupMsg(who,text,autoScroll=true){ const box=document.getElementById('groupBox'); const div=document.createElement('div'); div.className='msg '+(who===currentUser?'me':'other'); div.innerHTML=`<span class="who">${who==='system'?'سیستم':who}</span>${escapeHtml(text)}`; box.appendChild(div); if(autoScroll) box.scrollTop=box.scrollHeight; }
+function escapeHtml(s){ return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function switchSide(side){ const chat=side==='chat'; document.getElementById('chatPanel').classList.toggle('hidden',!chat); document.getElementById('groupPanel').classList.toggle('hidden',chat); document.getElementById('tabChatBtn').classList.toggle('active',chat); document.getElementById('tabGroupBtn').classList.toggle('active',!chat); }
+function leaveRoom(){ 
+  if(isRecording && recorder && recorder.state !== 'inactive') recorder.stop(); 
+  if(screenStream) screenStream.getTracks().forEach(t=>t.stop());
+  if(localStream) localStream.getTracks().forEach(t=>t.stop()); 
+  if(qdBoard) { try { qdBoard.destroy(); } catch(e) {} qdBoard = null; }
+  localStream=null; screenStream=null; currentClass=null; 
+  document.getElementById('roomPage').classList.add('hidden'); 
+  enterHome(); 
+}
+
+(function init(){
+  const saved = localStorage.getItem('zs_current');
+  if(saved){ const users=getUsers(); if(users[saved]){ currentUser=saved; currentRole=users[saved].role||'student'; enterHome(); } }
+})();
+</script>
+</body>
+</html>
