@@ -55,7 +55,7 @@
   #boardContainer.board-collapsed { display: none !important; }
   #boardContainer.fullscreen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; margin: 0; border-radius: 0; z-index: 9999; box-shadow: none; }
 
-  /* 🔒 لایه قفل روی تخته برای دانش‌آموزان */
+  /* 🔒 لایه قفل تخته برای دانش‌آموزان */
   #boardLockOverlay {
     position: absolute; top: 40px; left: 0; right: 0; bottom: 0;
     background: rgba(15, 23, 42, 0.6);
@@ -180,7 +180,6 @@
   <div class="room-header">
     <h3 id="roomTitle">کلاس</h3>
     <div>
-      <!-- 🔧 دکمه درخواست دسترسی برای دانش آموز -->
       <button class="warning hidden" id="btnRequestAccess" onclick="requestBoardAccess()">🙋‍♂️ درخواست اجازه نوشتن</button>
       <button class="success" onclick="toggleBoardCollapse()" id="btnToggleBoard">🖊️ مخفی کردن تخته</button>
       <button class="danger" onclick="leaveRoom()">🚪 خروج از کلاس</button>
@@ -261,7 +260,7 @@
 
 <script>
 /* =========================================================
-   🔌 اتصال به Supabase
+   🔌 اتصال به Supabase (آدرس و کلید شما)
    ========================================================= */
 const SUPABASE_URL = 'https://scurvrwzfehajtdnxfal.supabase.co'; 
 const SUPABASE_ANON_KEY = 'sb_publishable_Kb7ARLANFgSCxLHNQYL92A_EwmptfRR';
@@ -360,7 +359,7 @@ function openModal(id){
   }
   document.getElementById(id).classList.remove('hidden');
 }
-function closeModal(id){ document.getElementById(id).classList.remove('hidden'); } // 🔧 اصلاح شد
+function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
 
 function tryCreateClass(){
   if(currentRole !== 'teacher' && currentRole !== 'admin'){ 
@@ -533,9 +532,7 @@ function updateBoardLockState() {
 
   if (canEdit) {
     overlay.classList.add('hidden');
-    if (currentRole === 'student') {
-      btnRequest.classList.add('hidden');
-    }
+    if (currentRole === 'student') btnRequest.classList.add('hidden');
   } else {
     overlay.classList.remove('hidden');
     btnRequest.classList.remove('hidden');
@@ -546,7 +543,6 @@ async function requestBoardAccess() {
   if (currentRole !== 'student') return;
   const msg = `🙋‍♂️ <b>${currentUser}</b> درخواست اجازه نوشتن روی تخته دارد.`;
   
-  // ارسال پیام با دکمه‌های تایید برای معلم
   const content = msg + `<div class="msg-actions">
     <button class="success" onclick="grantBoardAccess('${currentUser}', true)">✅ اجازه می‌دهم</button>
     <button class="danger" onclick="grantBoardAccess('${currentUser}', false)">❌ رد کردن</button>
@@ -561,7 +557,6 @@ async function requestBoardAccess() {
   }
 }
 
-// این تابع برای معلم است که وقتی دکمه تایید را می‌زند اجرا می‌شود
 async function grantBoardAccess(studentName, isAllowed) {
   if (currentRole !== 'teacher' && currentRole !== 'admin') return;
   
@@ -569,7 +564,6 @@ async function grantBoardAccess(studentName, isAllowed) {
     ? `✅ <b>${studentName}</b> اجازه نوشتن روی تخته را گرفت.`
     : `❌ <b>${studentName}</b> اجازه نوشتن روی تخته را نگرفت.`;
 
-  // 1. ارسال پیام تایید/رد
   if(sb) {
     await sb.from('class_messages').insert([{ 
       class_name: currentClass, 
@@ -578,34 +572,11 @@ async function grantBoardAccess(studentName, isAllowed) {
     }]);
   }
 
-  // 2. 🔧 دسترسی برای دانش‌آموز فعال می‌شود (فقط سمت کاربر دانش‌آموز)
+  // اعمال تغییرات برای کاربر فعلی (اگر خودش دانش‌آموز باشد)
   if (isAllowed && currentUser === studentName) {
     hasBoardPermission = true;
     updateBoardLockState();
   } else if (!isAllowed && currentUser === studentName) {
-    hasBoardPermission = false;
-    updateBoardLockState();
-  }
-}
-
-// این تابع برای لغو دسترسی است که معلم می‌تواند بزند
-async function revokeBoardAccess(studentName) {
-  if (currentRole !== 'teacher' && currentRole !== 'admin') return;
-  
-  const content = `❌ <b>${studentName}</b> دیگر اجازه نوشتن روی تخته را ندارد.
-  <div class="msg-actions">
-    <button class="warning" onclick="grantBoardAccess('${studentName}', true)">✅ اجازه دوباره</button>
-  </div>`;
-
-  if(sb) {
-    await sb.from('class_messages').insert([{ 
-      class_name: currentClass, 
-      sender: 'system', 
-      content: content 
-    }]);
-  }
-
-  if (currentUser === studentName) {
     hasBoardPermission = false;
     updateBoardLockState();
   }
@@ -626,9 +597,7 @@ function toggleBoardCollapse() {
     floatBtn.classList.remove('show');
     toggleBtn.innerHTML = '🖊️ مخفی کردن تخته';
     toggleBtn.classList.replace('danger', 'success');
-    if (qdBoard && qdBoard.resize) {
-      setTimeout(() => qdBoard.resize(), 100);
-    }
+    if (qdBoard && qdBoard.resize) setTimeout(() => qdBoard.resize(), 100);
   }
 }
 
@@ -722,7 +691,6 @@ function addClassMsg(who, content, isHtml = false){
   const safeContent = isHtml ? content : escapeHtml(content);
   div.innerHTML=`<span class="who">${who==='system'?'سیستم':who}</span>${safeContent}`; 
   
-  // برای دکمه‌های تایید که در محتوا هستند (فقط برای معلم)
   if (isSystem && (currentRole === 'teacher' || currentRole === 'admin')) {
     div.innerHTML = safeContent; 
   }
@@ -768,7 +736,7 @@ function toggleChatVoice() {
 }
 
 /* =========================================================
-   🎥 ضبط کلاس
+   🎥 ضبط کلاس و آپلود
    ========================================================= */
 async function toggleRecord(){
   const btn = document.getElementById('btnRec');
@@ -803,6 +771,7 @@ async function toggleRecord(){
         addClassMsg('system', '⏳ در حال آپلود فایل ضبط به سرور...');
         
         try {
+          // آپلود به باکت class-recordings
           const { data, error } = await sb.storage.from('class-recordings').upload(filename, blob, { contentType: 'video/webm' });
           if (error) throw error;
           const { data: urlData } = sb.storage.from('class-recordings').getPublicUrl(filename);
